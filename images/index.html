@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insta Smokes</title>
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a1e;
+    color: #eee;
+    padding: 16px;
+    max-width: 600px;
+    margin: 0 auto;
+  }
+  
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin: 10px 0 20px 0;
+    position: relative;
+  }
+  .header-logo { width: 48px; height: 48px; object-fit: contain; image-rendering: pixelated; }
+  h1 { font-size: 1.6rem; margin: 0; letter-spacing: 0.5px; }
+
+  .top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    margin-bottom: 16px;
+    min-height: 40px;
+  }
+  .btn-top-back {
+    position: absolute;
+    left: 0;
+    background: #222;
+    border: 1px solid #3a3a44;
+    color: #ccc;
+    border-radius: 8px;
+    padding: 8px 14px;
+    font-size: 1.2rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-top-back:active { background: #3a3a44; }
+
+  .breadcrumb {
+    font-size: 1rem;
+    color: #ccc;
+    text-align: center;
+    font-weight: 500;
+    margin: 0 40px;
+  }
+  
+  .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  .grid-spawns { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .grid-nav { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 16px; }
+  
+  button {
+    font: inherit;
+    color: #eee;
+    background: #2c2c34;
+    border: 1px solid #3a3a44;
+    border-radius: 10px;
+    padding: 16px 10px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background 0.15s, opacity 0.15s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    position: relative;
+  }
+  button:active { background: #3a3a44; }
+  button.back { background: #222; font-size: 0.9rem; padding: 12px; }
+  button.next { background: #2c2c34; font-size: 0.9rem; padding: 12px; border: 1px solid #4a90d9; color: #4a90d9; }
+  button.menu { background: #222; font-size: 0.9rem; padding: 12px; color: #ccc; }
+  
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    background: #1e1e24;
+    border-color: #2a2a30;
+  }
+  button:disabled::after {
+    content: "✕";
+    position: absolute;
+    color: #c8102e;
+    font-size: 1.5rem;
+    font-weight: bold;
+    opacity: 0.7;
+  }
+
+  .full { grid-column: 1 / -1; }
+  .icon { width: 32px; height: 32px; flex-shrink: 0; }
+
+  .map-container {
+    position: relative;
+    width: 100%;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #444;
+    margin-bottom: 16px;
+  }
+  .map-container img { width: 100%; display: block; }
+  .spawn-hitbox {
+    position: absolute;
+    cursor: pointer;
+    border: 2px solid #c8102e;
+    border-radius: 6px;
+    background: rgba(200, 16, 46, 0.1);
+    transition: background 0.1s;
+  }
+  .spawn-hitbox:active { background: rgba(200, 16, 46, 0.5); }
+
+  .lineup-view { text-align: center; }
+  .lineup-img {
+    width: 100%; border-radius: 10px; margin-bottom: 14px;
+    display: none; border: 1px solid #444;
+  }
+  .lineup-img.active { display: block; }
+
+  .command-box {
+    width: 100%; background: #111; border: 1px solid #444; border-radius: 10px;
+    padding: 16px; font-family: monospace; font-size: 0.9rem; color: #4ade80;
+    margin-bottom: 14px; word-break: break-all; text-align: left; line-height: 1.4;
+    cursor: pointer; position: relative; transition: background 0.2s, border-color 0.2s;
+  }
+  .command-box:active { background: #1a2a1a; }
+  .command-box.copied { border-color: #4ade80; background: #1a2a1a; }
+  .copy-hint {
+    display: block; font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    font-size: 0.75rem; color: #666; margin-top: 8px; text-align: right;
+    text-transform: uppercase; font-weight: 600; letter-spacing: 0.5px;
+  }
+
+  .throw-badge {
+    display: inline-block; background: #c8102e; color: #fff; font-weight: 600;
+    padding: 10px 20px; border-radius: 8px; font-size: 1.1rem; margin-bottom: 14px;
+  }
+  .notes { color: #aaa; font-size: 0.9rem; margin-bottom: 14px; }
+  .hidden { display: none; }
+
+  /* Footer / Disclaimer Styling */
+  .footer-disclaimer {
+    margin-top: 40px;
+    margin-bottom: 20px;
+    font-size: 0.8rem;
+    color: #666;
+    text-align: center;
+  }
+  .footer-disclaimer details {
+    cursor: pointer;
+    display: inline-block;
+    background: #1e1e24;
+    padding: 8px 16px;
+    border-radius: 8px;
+    border: 1px solid #2a2a30;
+  }
+  .footer-disclaimer summary {
+    list-style: none;
+    outline: none;
+  }
+  .footer-disclaimer summary::-webkit-details-marker {
+    display: none;
+  }
+  .footer-disclaimer p {
+    text-align: left;
+    margin-top: 10px;
+    line-height: 1.5;
+    color: #888;
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <img src="logo.png" alt="Insta Smokes Logo" class="header-logo">
+  <h1>Insta Smokes</h1>
+</div>
+
+<div class="top-bar" id="top-bar">
+  <div class="breadcrumb" id="crumb"></div>
+</div>
+
+<!-- MAP SELECTION -->
+<div id="view-map" class="grid"></div>
+
+<!-- SIDE SELECTION -->
+<div id="view-side" class="grid hidden">
+  <button onclick="selectSide('T')"><span class="icon" id="icon-t"></span>T Side</button>
+  <button onclick="selectSide('CT')"><span class="icon" id="icon-ct"></span>CT Side</button>
+  <button class="back full" onclick="goHome()">← Back to maps</button>
+</div>
+
+<!-- SPAWN SELECTION -->
+<div id="view-spawn" class="hidden">
+  <div id="spawn-map-wrapper"></div>
+  <div class="grid-spawns" id="spawn-buttons"></div>
+  <div class="grid" style="margin-top: 10px;">
+    <button class="back full" onclick="show('view-side'); setCrumb(currentMap + ' — pick a side')">← Back to side</button>
+  </div>
+</div>
+
+<!-- LINEUP DISPLAY -->
+<div id="view-lineup" class="lineup-view hidden">
+  <img id="lineup-img" class="lineup-img" src="" alt="Lineup Screenshot">
+  
+  <div class="command-box" id="lineup-cmd" onclick="copyCommand()">
+    <span id="cmd-text">Command goes here</span>
+    <span class="copy-hint" id="copy-hint">Click to copy</span>
+  </div>
+  
+  <div class="throw-badge" id="throw-badge">Jumpthrow</div>
+  <div class="notes" id="lineup-notes"></div>
+  
+  <div class="grid-nav">
+    <button class="menu" onclick="backToSpawns()">☷ Spawns</button>
+    <button class="back" onclick="prevSpawn()">← Prev</button>
+    <button class="next" onclick="nextSpawn()">Next →</button>
+  </div>
+</div>
+
+<!-- FOOTER DISCLAIMER -->
+<div class="footer-disclaimer">
+  <details>
+    <summary>ℹ️ About & Legal</summary>
+    <p>
+      <strong>Insta Smokes</strong> is a free, non-profit fan-made tool for the Counter-Strike community.<br><br>
+      This site is not affiliated with or endorsed by Valve Corporation. Counter-Strike and all related assets are trademarks of Valve Corporation.<br><br>
+      Some screenshots and lineup data have been gathered from community resources (including csnades.gg) under the assumption of fair use for non-commercial, transformative, and educational purposes.<br><br>
+      All code and original SVG artwork are provided as-is for personal use. No monetary gain is generated from this project.
+    </p>
+  </details>
+</div>
+
+<script>
+// ===== PIXEL-ART ICONS =====
+const ICONS = {
+  t: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#5c4033"/><circle cx="16" cy="16" r="11" fill="#d2b48c"/><polygon points="16,8 18.5,13.5 24,14 20,18 21.5,24 16,21 10.5,24 12,18 8,14 13.5,13.5" fill="#5c4033"/></svg>`,
+  ct: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#4a90d9"/><circle cx="16" cy="16" r="11" fill="#1a1a1e"/><polygon points="16,8 18.5,13.5 24,14 20,18 21.5,24 16,21 10.5,24 12,18 8,14 13.5,13.5" fill="#4a90d9"/></svg>`,
+  mirage: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polygon points="16,2 30,8 30,24 16,30 2,24 2,8" fill="#c8102e"/><rect x="10" y="10" width="4" height="8" fill="#4a90d9"/><rect x="14" y="6" width="4" height="12" fill="#4a90d9"/><rect x="18" y="12" width="4" height="6" fill="#4a90d9"/><rect x="10" y="20" width="12" height="3" fill="#e8b923"/></svg>`,
+  inferno: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><path d="M16 2 L28 6 L28 16 Q28 26 16 30 Q4 26 4 16 L4 6 Z" fill="#c8102e"/><rect x="13" y="10" width="6" height="12" fill="#7a0000"/></svg>`,
+  ancient: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#d4af37"/><circle cx="16" cy="16" r="10" fill="#1a1a1e" stroke="#d4af37" stroke-width="4" stroke-dasharray="3 2"/></svg>`,
+  cache: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polygon points="16,2 20,12 30,12 22,18 25,28 16,22 7,28 10,18 2,12 12,12" fill="#8b5a2b" stroke="#8b5a2b" stroke-width="4" stroke-linejoin="round"/><polygon points="16,5 18.8,13.2 26.5,13.2 20.3,17.3 22.5,24.5 16,19.8 9.5,24.5 11.7,17.3 5.5,13.2 13.2,13.2" fill="#c8102e"/></svg>`,
+  dust2: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#555"/><circle cx="16" cy="16" r="11" fill="#1a1a1e"/><path d="M16 8l8 12H8z" fill="#888"/><rect x="14" y="12" width="4" height="4" fill="#1a1a1e"/></svg>`,
+  nuke: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><circle cx="16" cy="16" r="14" fill="#4a90d9"/><circle cx="16" cy="16" r="11" fill="#1a1a1e"/><g fill="#e8b923"><circle cx="16" cy="16" r="2.5"/><path d="M16 12.5 A3.5 3.5 0 0 1 19.03 14.25 L21.75 11.53 A7 7 0 0 0 16 9 Z" /><path d="M16 12.5 A3.5 3.5 0 0 1 19.03 14.25 L21.75 11.53 A7 7 0 0 0 16 9 Z" transform="rotate(120 16 16)" /><path d="M16 12.5 A3.5 3.5 0 0 1 19.03 14.25 L21.75 11.53 A7 7 0 0 0 16 9 Z" transform="rotate(240 16 16)" /></g></svg>`,
+  anubis: `<svg class="icon" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg"><polygon points="16,2 30,16 16,30 2,16" fill="#a48c6d"/><polygon points="16,6 26,16 16,26 6,16" fill="#1a1a1e"/><rect x="14" y="10" width="4" height="12" fill="#a48c6d"/></svg>`
+};
+
+// ===== DATA =====
+const MAPS = ["Mirage", "Inferno", "Dust2", "Ancient", "Anubis", "Nuke", "Cache"];
+
+const MAP_HITBOXES = {
+  mirage: {
+    T: [
+      { spawn: 1, x: 74.0, y: 72.0, w: 14, h: 20 },
+      { spawn: 2, x: 9.5, y: 72.7, w: 14, h: 20 },
+      { spawn: 3, x: 65.5, y: 47.7, w: 14, h: 21 },
+      { spawn: 4, x: 49.5, y: 47.7, w: 14, h: 21 },
+      { spawn: 5, x: 33.5, y: 47.7, w: 14, h: 21 }
+    ]
+  },
+  anubis: {
+    T: [
+      { spawn: 1, x: 23.5, y: 24.0, w: 11, h: 14 }, 
+      { spawn: 2, x: 35.5, y: 17.0, w: 11, h: 14 }, 
+      { spawn: 3, x: 54.5, y: 10.0, w: 11, h: 14 }, 
+      { spawn: 4, x: 70.0, y: 10.0, w: 11, h: 14 }, 
+      { spawn: 5, x: 17.0, y: 46.5, w: 11, h: 12 }, 
+      { spawn: 6, x: 39.0, y: 48.0, w: 11, h: 14 }, 
+      { spawn: 7, x: 48.0, y: 30.5, w: 11, h: 14 }, 
+      { spawn: 8, x: 62.5, y: 44.0, w: 11, h: 14 }, 
+      { spawn: 9, x: 73.0, y: 31.0, w: 11, h: 14 }, 
+      { spawn: 10, x: 75.5, y: 63.0, w: 11, h: 15 }, 
+      { spawn: 11, x: 16.0, y: 79.0, w: 11, h: 14 }  
+    ]
+  },
+  ancient: {
+    T: [
+      { spawn: 1, x: 14.8, y: 13.4, w: 12.7, h: 39.9 },
+      { spawn: 2, x: 34.4, y: 10.1, w: 9.5,  h: 36.1 },
+      { spawn: 3, x: 37.2, y: 31.1, w: 14.4, h: 40.8 },
+      { spawn: 4, x: 58.7, y: 23.1, w: 13.7, h: 44.1 },
+      { spawn: 5, x: 66.8, y: 51.3, w: 20.0, h: 45.4 }
+    ]
+  }
+};
+
+const DATA = {
+  Mirage: {
+    T: [
+      { name: "1 - Window", throw: "W Jumpthrow", notes: "", cmd: "setpos 1296.000000 32.000000 -103.968750;setang -28.912655 -165.958206 0.000000", img: "mirage_t1_window.png" },
+      { name: "2 - Window", throw: "W Jumpthrow", notes: "", cmd: "setpos 1296.000000 -352.000000 -103.968750;setang -42.455078 -173.246902 0.000000", img: "mirage_t2_window.png" },
+      { name: "3 - Window", throw: "W Jumpthrow", notes: "", cmd: "setpos 1216.000000 -16.000000 -101.936905;setang -44.583965 -165.672256 0.000000", img: "mirage_t3_window.png" },
+      { name: "4 - Window", throw: "W Jumpthrow", notes: "", cmd: "setpos 1216.000000 -115.000000 -102.953156;setang -44.461876 -167.666443 0.000000", img: "mirage_t4_window.png" },
+      { name: "5 - Window", throw: "W Jumpthrow", notes: "", cmd: "setpos 1216.000000 -211.000000 -100.616211;setang -46.031891 -170.316223 0.000000", img: "mirage_t5_window.png" }
+    ],
+    CT: []
+  },
+  Anubis: {
+    T: [
+      { name: "1 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -384.000000 -1552.000000 52.031311;setang -16.775085 82.025635 0.000000", img: "anubis_t1_mid.png" },
+      { name: "2 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -328.000000 -1528.000000 52.031311;setang -20.553535 83.815323 0.000000", img: "anubis_t2_mid.png" },
+      { name: "3 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -234.000000 -1503.079956 52.031311;setang -18.665470 86.210915 0.000000", img: "anubis_t3_mid.png" },
+      { name: "3 - B Lurk", throw: "Jumpthrow", notes: "", cmd: "setpos -234.000000 -1503.079956 52.031311;setang -18.665470 86.210915 0.000000", img: "anubis_t3_blurk.png" },
+      { name: "4 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -154.000000 -1503.079956 52.031250;setang -19.316833 87.320908 0.000000", img: "anubis_t4_mid.png" },
+      { name: "5 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -416.000000 -1608.000000 59.564808;setang -24.199497 82.553040 0.000000", img: "anubis_t5_mid.png" },
+      { name: "6 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -304.000000 -1608.000000 52.031311;setang -9.865526 84.608383 0.000000", img: "anubis_t6_mid.png" },
+      { name: "7 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -264.000000 -1560.000000 52.031311;setang -18.359896 85.164413 0.000000", img: "anubis_t7_mid.png" },
+      { name: "8 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -192.000000 -1608.000000 52.031250;setang -15.122405 87.172386 0.000000", img: "anubis_t8_mid.png" },
+      { name: "9 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -144.000000 -1568.000000 52.031311;setang -19.239401 88.390701 0.000000", img: "anubis_t9_mid.png" },
+      { name: "10 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -128.004028 -1613.984009 52.031250;setang -12.043651 89.041862 0.000000", img: "anubis_t10_mid.png" },
+      { name: "11 - Mid", throw: "Jumpthrow", notes: "", cmd: "setpos -416.000000 -1696.000000 66.031296;setang -10.569246 81.922501 0.000000", img: "anubis_t11_mid.png" }
+    ],
+    CT: []
+  },
+  Inferno: { T: [], CT: [] },
+  Cache: { T: [], CT: [] },
+  Dust2: { T: [], CT: [] },
+  Ancient: {
+    T: [
+      // Image-only lineups: no console command, so no command box is shown
+      { name: "1 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 1.", img: "ancient_t1_red.png" },
+      { name: "2 - Red", throw: "W Jumpthrow (move left)", notes: "Jumpthrow while moving left, as shown in the screenshot.", img: "ancient_t2_red.png" },
+      { name: "3 - Red", throw: "W Jumpthrow (move right)", notes: "Move right, then W + jumpthrow.", img: "ancient_t3_red.png" },
+      { name: "4 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 4.", img: "ancient_t4_red.png" },
+      { name: "5 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 5.", img: "ancient_t5_red.png" }
+    ],
+    CT: []
+  },
+  Nuke: { T: [], CT: [] }
+};
+
+// ===== STATE & VIEW HELPERS =====
+let currentMap = null;
+let currentSide = null;
+let activeLineupIndex = 0; 
+
+function show(id) {
+  ["view-map", "view-side", "view-spawn", "view-lineup"].forEach(v => {
+    document.getElementById(v).classList.add("hidden");
+  });
+  document.getElementById(id).classList.remove("hidden");
+  
+  const topBackBtn = document.getElementById("top-back-btn");
+  if (id === "view-lineup") {
+    topBackBtn.classList.remove("hidden");
+  } else {
+    topBackBtn.classList.add("hidden");
+  }
+}
+
+function setCrumb(text) {
+  document.getElementById("crumb").textContent = text;
+}
+
+function buildMapButtons() {
+  const container = document.getElementById("view-map");
+  container.innerHTML = "";
+  MAPS.forEach(map => {
+    const btn = document.createElement("button");
+    const iconKey = map.toLowerCase();
+    
+    const hasData = DATA[map].T.length > 0 || DATA[map].CT.length > 0;
+    if (!hasData) {
+      btn.disabled = true;
+    }
+
+    btn.innerHTML = `<span class="icon">${ICONS[iconKey] || ""}</span>${map}`;
+    btn.onclick = () => selectMap(map);
+    container.appendChild(btn);
+  });
+}
+
+document.getElementById("top-bar").innerHTML = `
+  <button class="btn-top-back hidden" id="top-back-btn" onclick="backToSpawns()">←</button>
+  <div class="breadcrumb" id="crumb"></div>
+`;
+
+document.getElementById("icon-t").innerHTML = ICONS.t;
+document.getElementById("icon-ct").innerHTML = ICONS.ct;
+buildMapButtons();
+
+// ===== ACTIONS =====
+function selectMap(map) {
+  currentMap = map;
+  show("view-side");
+  setCrumb(map + " — pick a side");
+}
+
+function selectSide(side) {
+  currentSide = side;
+  const spawns = DATA[currentMap][side];
+  
+  const mapWrapper = document.getElementById("spawn-map-wrapper");
+  const buttonContainer = document.getElementById("spawn-buttons");
+  buttonContainer.innerHTML = "";
+
+  const imagePath = `images/${currentMap.toLowerCase()}_${side.toLowerCase()}_spawns.png`;
+  const hitboxes = MAP_HITBOXES[currentMap.toLowerCase()]?.[side];
+
+  if (hitboxes && spawns.length > 0) {
+    let html = `<div class="map-container"><img src="${imagePath}" alt="${currentMap} ${side} spawn map">`;
+    
+    hitboxes.forEach(box => {
+      const spawnIndex = spawns.findIndex(s => s.name.startsWith(box.spawn.toString()));
+      if (spawnIndex !== -1) {
+        html += `<div class="spawn-hitbox" style="left:${box.x}%; top:${box.y}%; width:${box.w}%; height:${box.h}%;" onclick="showLineup(${spawnIndex})"></div>`;
+      }
+    });
+    html += `</div>`;
+    mapWrapper.innerHTML = html;
+  } else {
+    mapWrapper.innerHTML = "";
+  }
+
+  if (spawns.length === 0) {
+    buttonContainer.innerHTML = '<button class="full" disabled style="opacity:0.5">No lineups yet</button>';
+  } else {
+    // Group lineups by spawn number (name format: "3 - Window" / "3 - Red")
+    const spawnGroups = [];
+    spawns.forEach((lineup, idx) => {
+      const spawnNum = lineup.name.split(" ")[0];
+      let group = spawnGroups.find(g => g.spawn === spawnNum);
+      if (!group) {
+        group = { spawn: spawnNum, entries: [] };
+        spawnGroups.push(group);
+      }
+      group.entries.push({ idx, target: lineup.name.split(" - ").slice(1).join(" - ") });
+    });
+
+    spawnGroups.forEach(group => {
+      group.entries.forEach(entry => {
+        const btn = document.createElement("button");
+        // When one spawn has several lineups (e.g. Red + Elbow) label them by target
+        btn.textContent = group.entries.length > 1
+          ? `Spawn ${group.spawn} — ${entry.target}`
+          : `Spawn ${group.spawn}`;
+        btn.onclick = () => showLineup(entry.idx);
+        buttonContainer.appendChild(btn);
+      });
+    });
+  }
+
+  show("view-spawn");
+  setCrumb(currentMap + " — " + side + " spawns");
+}
+
+function showLineup(index) {
+  activeLineupIndex = index; 
+  const lineup = DATA[currentMap][currentSide][index];
+  
+  const imgElement = document.getElementById("lineup-img");
+  if (lineup.img && lineup.img.trim() !== "") {
+    imgElement.src = "images/" + lineup.img; 
+    imgElement.classList.add("active");
+    imgElement.onerror = () => { imgElement.classList.remove("active"); };
+  } else {
+    imgElement.classList.remove("active");
+    imgElement.src = "";
+  }
+
+  // Command box is only shown for lineups that actually have a console command
+  const cmdBox = document.getElementById("lineup-cmd");
+  const cmdText = (lineup.cmd || "").trim();
+  if (cmdText !== "") {
+    document.getElementById("cmd-text").textContent = cmdText;
+    document.getElementById("copy-hint").textContent = "Click to copy";
+    cmdBox.classList.remove("copied");
+    cmdBox.classList.remove("hidden");
+  } else {
+    cmdBox.classList.add("hidden");
+  }
+
+  document.getElementById("throw-badge").textContent = lineup.throw || "None";
+  document.getElementById("throw-badge").style.display = lineup.throw ? "inline-block" : "none";
+  document.getElementById("lineup-notes").textContent = lineup.notes || "";
+  
+  show("view-lineup");
+  setCrumb(currentMap + " — Spawn " + lineup.name);
+}
+
+function nextSpawn() {
+  const spawns = DATA[currentMap][currentSide];
+  let nextIdx = activeLineupIndex + 1;
+  if (nextIdx >= spawns.length) nextIdx = 0; 
+  showLineup(nextIdx);
+}
+
+function prevSpawn() {
+  const spawns = DATA[currentMap][currentSide];
+  let prevIdx = activeLineupIndex - 1;
+  if (prevIdx < 0) prevIdx = spawns.length - 1; 
+  showLineup(prevIdx);
+}
+
+// ===== COPY TO CLIPBOARD =====
+function copyCommand() {
+  const textToCopy = document.getElementById("cmd-text").textContent;
+  if (textToCopy === "No command added") return;
+
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(textToCopy).then(showCopySuccess);
+  } else {
+    fallbackCopyTextToClipboard(textToCopy);
+  }
+}
+
+function showCopySuccess() {
+  const box = document.getElementById("lineup-cmd");
+  const hint = document.getElementById("copy-hint");
+  box.classList.add("copied");
+  hint.textContent = "Copied! ✅";
+  setTimeout(() => { box.classList.remove("copied"); hint.textContent = "Click to copy"; }, 2000);
+}
+
+function fallbackCopyTextToClipboard(text) {
+  var textArea = document.createElement("textarea");
+  textArea.value = text; textArea.style.position = "fixed"; textArea.style.top = "-9999px";
+  document.body.appendChild(textArea); textArea.focus(); textArea.select();
+  try { document.execCommand('copy'); showCopySuccess(); } catch (err) {}
+  document.body.removeChild(textArea);
+}
+
+function backToSpawns() {
+  selectSide(currentSide);
+}
+
+function goHome() {
+  currentMap = null; currentSide = null;
+  show("view-map"); setCrumb("");
+}
+</script>
+</body>
+</html>
