@@ -283,6 +283,15 @@ const MAP_HITBOXES = {
       { spawn: 10, x: 75.5, y: 63.0, w: 11, h: 15 }, 
       { spawn: 11, x: 16.0, y: 79.0, w: 11, h: 14 }  
     ]
+  },
+  ancient: {
+    T: [
+      { spawn: 1, x: 14.8, y: 13.4, w: 12.7, h: 39.9 },
+      { spawn: 2, x: 34.4, y: 10.1, w: 9.5,  h: 36.1 },
+      { spawn: 3, x: 37.2, y: 31.1, w: 14.4, h: 40.8 },
+      { spawn: 4, x: 58.7, y: 23.1, w: 13.7, h: 44.1 },
+      { spawn: 5, x: 66.8, y: 51.3, w: 20.0, h: 45.4 }
+    ]
   }
 };
 
@@ -317,7 +326,17 @@ const DATA = {
   Inferno: { T: [], CT: [] },
   Cache: { T: [], CT: [] },
   Dust2: { T: [], CT: [] },
-  Ancient: { T: [], CT: [] },
+  Ancient: {
+    T: [
+      // Image-only lineups: no console command, so no command box is shown
+      { name: "1 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 1.", img: "ancient_t1_red.png" },
+      { name: "2 - Red", throw: "W Jumpthrow (move left)", notes: "Jumpthrow while moving left, as shown in the screenshot.", img: "ancient_t2_red.png" },
+      { name: "3 - Red", throw: "W Jumpthrow (move right)", notes: "Move right, then W + jumpthrow.", img: "ancient_t3_red.png" },
+      { name: "4 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 4.", img: "ancient_t4_red.png" },
+      { name: "5 - Red", throw: "W Jumpthrow", notes: "Instant red smoke from spawn 5.", img: "ancient_t5_red.png" }
+    ],
+    CT: []
+  },
   Nuke: { T: [], CT: [] }
 };
 
@@ -407,15 +426,28 @@ function selectSide(side) {
   if (spawns.length === 0) {
     buttonContainer.innerHTML = '<button class="full" disabled style="opacity:0.5">No lineups yet</button>';
   } else {
-    const uniqueSpawns = [...new Set(spawns.map(s => s.name.split(' ')[0]))];
-    uniqueSpawns.forEach(spawnNum => {
-      const btn = document.createElement("button");
-      btn.textContent = `Spawn ${spawnNum}`;
-      btn.onclick = () => {
-         const idx = spawns.findIndex(s => s.name.startsWith(spawnNum));
-         showLineup(idx);
-      };
-      buttonContainer.appendChild(btn);
+    // Group lineups by spawn number (name format: "3 - Window" / "3 - Red")
+    const spawnGroups = [];
+    spawns.forEach((lineup, idx) => {
+      const spawnNum = lineup.name.split(" ")[0];
+      let group = spawnGroups.find(g => g.spawn === spawnNum);
+      if (!group) {
+        group = { spawn: spawnNum, entries: [] };
+        spawnGroups.push(group);
+      }
+      group.entries.push({ idx, target: lineup.name.split(" - ").slice(1).join(" - ") });
+    });
+
+    spawnGroups.forEach(group => {
+      group.entries.forEach(entry => {
+        const btn = document.createElement("button");
+        // When one spawn has several lineups (e.g. Red + Elbow) label them by target
+        btn.textContent = group.entries.length > 1
+          ? `Spawn ${group.spawn} — ${entry.target}`
+          : `Spawn ${group.spawn}`;
+        btn.onclick = () => showLineup(entry.idx);
+        buttonContainer.appendChild(btn);
+      });
     });
   }
 
@@ -437,10 +469,17 @@ function showLineup(index) {
     imgElement.src = "";
   }
 
-  const cmdText = lineup.cmd || "No command added";
-  document.getElementById("cmd-text").textContent = cmdText;
-  document.getElementById("copy-hint").textContent = cmdText === "No command added" ? "" : "Click to copy";
-  document.getElementById("lineup-cmd").classList.remove("copied");
+  // Command box is only shown for lineups that actually have a console command
+  const cmdBox = document.getElementById("lineup-cmd");
+  const cmdText = (lineup.cmd || "").trim();
+  if (cmdText !== "") {
+    document.getElementById("cmd-text").textContent = cmdText;
+    document.getElementById("copy-hint").textContent = "Click to copy";
+    cmdBox.classList.remove("copied");
+    cmdBox.classList.remove("hidden");
+  } else {
+    cmdBox.classList.add("hidden");
+  }
 
   document.getElementById("throw-badge").textContent = lineup.throw || "None";
   document.getElementById("throw-badge").style.display = lineup.throw ? "inline-block" : "none";
